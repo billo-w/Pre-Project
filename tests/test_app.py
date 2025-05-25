@@ -1,4 +1,4 @@
-from flask_app.main import app
+from app import app  # Import directly from app.py
 
 def test_index():
     client = app.test_client()
