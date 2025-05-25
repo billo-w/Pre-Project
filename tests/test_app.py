@@ -1,5 +1,10 @@
+# tests/test_app.py
 import os
-import pytest
+import sys
+
+# Ensure project root is on PYTHONPATH
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app import create_app
 
 def test_home_route():
