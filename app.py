@@ -84,7 +84,12 @@ def create_app(config_object=None):
     )
 
     if config_object:
-        app.config.from_object(config_object)
+        if isinstance(config_object, dict):
+            app.config.update(config_object)
+        else:
+            app.config.from_object(config_object)
+        logger.info(f"Applied config object: {config_object}")
+
 
     # --- Extensions Init ---
     db.init_app(app)
