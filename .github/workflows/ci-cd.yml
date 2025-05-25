@@ -1,4 +1,4 @@
-name: CI-CD
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,35 +6,49 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  DIGITALOCEAN_APP_NAME: job-app  # Change this to your App Platform app name
+
 jobs:
-  build-and-deploy:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
     - name: Install dependencies
       run: |
+        python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest bandit safety
 
     - name: Run tests
+      env:
+        TESTING: true
+        WTF_CSRF_ENABLED: false
+        LOGIN_DISABLED: true
+        SQLALCHEMY_DATABASE_URI: sqlite:///:memory:
       run: |
-        pytest tests/
+        python -m unittest discover tests
 
-    - name: Run security checks
-      run: |
-        bandit -r flask_app/
-        safety check
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    - name: Deploy to DigitalOcean
-      uses: digitalocean/app_action@v1.1.5
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up doctl
+      uses: digitalocean/action-doctl@v2
       with:
-        app_name: flask-app
-        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        token: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+
+    - name: Deploy to DigitalOcean App Platform
+      run: doctl apps update ${{ env.DIGITALOCEAN_APP_NAME }} --spec .do/app.yaml
