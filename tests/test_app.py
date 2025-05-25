@@ -1,15 +1,11 @@
 import os
-import sys
-
-# Add root of project to Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+import pytest
 from app import create_app
 
 def test_home_route():
     app = create_app({
         'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',  # lightweight in-memory test DB
+        'SQLALCHEMY_DATABASE_URI': os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///:memory:'),
         'SQLALCHEMY_TRACK_MODIFICATIONS': False
     })
     client = app.test_client()
