@@ -1,0 +1,29 @@
+name: flask-app
+
+services:
+  - name: web
+    environment_slug: python
+    github:
+      repo: your-github-username/your-repo-name
+      branch: main
+      deploy_on_push: true
+    run_command: gunicorn app:app --bind 0.0.0.0:8080
+    build_command: pip install -r requirements.txt
+    envs:
+      - key: FLASK_ENV
+        value: production
+      - key: SQLALCHEMY_DATABASE_URI
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /
+
+databases:
+  - name: db
+    engine: PG
+    version: "15"
+    cluster_name: flask-app-db
+    production: true
