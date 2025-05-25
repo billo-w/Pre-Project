@@ -1,0 +1,40 @@
+name: CI-CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pytest bandit safety
+
+    - name: Run tests
+      run: |
+        pytest tests/
+
+    - name: Run security checks
+      run: |
+        bandit -r flask_app/
+        safety check
+
+    - name: Deploy to DigitalOcean
+      uses: digitalocean/app_action@v1.1.5
+      with:
+        app_name: flask-app
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
