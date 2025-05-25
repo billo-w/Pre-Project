@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Register - {{ super() }}{% endblock %}
+
+{% block navigation %}
+    <header class="py-4 text-center border-b border-slate-200 bg-white shadow-sm">
+         <a href="{{ url_for('main_bp.home') }}" class="text-2xl font-bold text-indigo-600 hover:text-indigo-700 transition-colors duration-200">Job Insights</a> {# FIXED #}
+    </header>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-12 md:py-16 max-w-md">
+    <h1 class="text-3xl font-bold text-center text-slate-800 mb-8">Register New Account</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category | default('info') }} mb-6" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="bg-white p-8 rounded-xl shadow-lg border border-slate-200/80">
+        <form method="POST" action="{{ url_for('main_bp.register') }}" novalidate> {# FIXED #}
+            {{ form.hidden_tag() }} {# Required for CSRF protection #}
+
+            <div class="mb-5">
+                {{ form.email.label(class="block text-sm font-medium text-slate-700 mb-1.5") }}
+                {{ form.email(class="w-full px-4 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-150 ease-in-out text-sm", placeholder="you@example.com", required=true, autofocus=true) }}
+                {% for error in form.email.errors %}
+                    <p class="text-red-600 text-xs mt-1.5 flex items-center">
+                        <i class="fas fa-exclamation-circle mr-1.5 text-xs"></i>{{ error }}
+                    </p>
+                {% endfor %}
+            </div>
+
+            <div class="mb-5">
+                {{ form.password.label(class="block text-sm font-medium text-slate-700 mb-1.5") }}
+                {{ form.password(class="w-full px-4 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-150 ease-in-out text-sm", placeholder="Choose a strong password (min 8 chars)", required=true) }}
+                 {% for error in form.password.errors %}
+                     <p class="text-red-600 text-xs mt-1.5 flex items-center">
+                        <i class="fas fa-exclamation-circle mr-1.5 text-xs"></i>{{ error }}
+                    </p>
+                {% endfor %}
+            </div>
+
+            <div class="mb-6">
+                {{ form.confirm_password.label(class="block text-sm font-medium text-slate-700 mb-1.5") }}
+                {{ form.confirm_password(class="w-full px-4 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-150 ease-in-out text-sm", placeholder="Enter the same password again", required=true) }}
+                 {% for error in form.confirm_password.errors %}
+                    <p class="text-red-600 text-xs mt-1.5 flex items-center">
+                        <i class="fas fa-exclamation-circle mr-1.5 text-xs"></i>{{ error }}
+                    </p>
+                {% endfor %}
+            </div>
+
+            <div class="text-center pt-2">
+                 {{ form.submit(class="w-full inline-flex items-center justify-center py-3 px-6 border border-transparent rounded-lg shadow-md text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 cursor-pointer") }}
+            </div>
+        </form>
+    </div>
+
+    <p class="text-center text-sm text-slate-600 mt-6">
+        Already have an account? <a href="{{ url_for('main_bp.login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">Login here</a> {# FIXED #}
+    </p>
+</div>
+{% endblock %}

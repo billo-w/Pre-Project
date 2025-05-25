@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Market Insights Search - {{ super() }}{% endblock %}
+
+{% block navigation %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-10 md:py-12 max-w-5xl">
+
+    <header class="text-center mb-12 md:mb-16">
+         <div class="inline-block bg-gradient-to-br from-indigo-500 to-purple-500 text-white p-4 rounded-full mb-5 shadow-lg">
+             <i class="fas fa-magnifying-glass-chart fa-2x"></i>
+         </div>
+         <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 tracking-tight">Recruiter Job Market Insights</h1>
+         <p class="text-slate-600 mt-3 text-lg max-w-xl mx-auto">Analyze job volume, salary trends, and potential skills with Adzuna & AI.</p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="max-w-3xl mx-auto mb-8"> {# Added margin-bottom #}
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category | default('info') }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg mb-12 md:mb-16 border border-slate-200/80">
+        <form action="{{ url_for('main_bp.get_insights') }}" method="POST" class="space-y-6"> {# FIXED #}
+             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label for="what" class="block text-sm font-medium text-slate-700 mb-1.5">Job Title / Keywords</label>
+                    <input type="text" name="what" id="what" required value="{{ form_data.get('what', '') }}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-150 ease-in-out text-sm"
+                           placeholder="e.g., data scientist">
+                </div>
+                <div>
+                    <label for="where" class="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
+                    <input type="text" name="where" id="where" required value="{{ form_data.get('where', '') }}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-150 ease-in-out text-sm"
+                           placeholder="e.g., london, san francisco">
+                </div>
+                <div>
+                    <label for="country" class="block text-sm font-medium text-slate-700 mb-1.5">Country Code (2 letters)</label>
+                    <input type="text" name="country" id="country" required maxlength="2" minlength="2" pattern="[a-zA-Z]{2}"
+                           title="Enter 2-letter country code (e.g., gb, us)" value="{{ form_data.get('country', '') }}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-150 ease-in-out text-sm"
+                           placeholder="e.g., gb, us, de">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center pt-2">
+                <input type="checkbox" name="generate_summary" id="generate_summary" value="true" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded mr-2" {% if form_data.get('generate_summary') == 'true' %}checked{% endif %}>
+                <label for="generate_summary" class="text-sm font-medium text-slate-700">Generate AI Recruitment Analysis?</label>
+            </div>
+
+            <div class="text-center pt-3">
+                <button type="submit" class="inline-flex items-center justify-center py-3 px-10 border border-transparent shadow-md text-base font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 transition-all-ease transform hover:-translate-y-0.5">
+                    <i class="fas fa-search mr-2 -ml-1 h-5 w-5"></i> Analyze Market
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if insights %} {# Check if insights data exists (passed from home route) #}
+    <section id="results" class="transition-all-ease duration-300 space-y-10">
+        <header class="text-center md:text-left border-b border-slate-200 pb-4">
+             <h2 class="text-2xl font-semibold text-slate-800"> Market Analysis </h2>
+             <p class="text-md text-slate-500 mt-1">
+                 Found <strong class="font-semibold text-indigo-600">{{ insights.total_matching_jobs }}</strong> jobs for "<strong class="font-medium text-slate-700">{{ insights.query.what }}</strong>" in <strong class="font-medium text-slate-700">{{ insights.query.where }}, {{ insights.query.country.upper() }}</strong>. Displaying top {{ insights.job_listings | length }}.
+             </p>
+        </header>
+
+        {% if insights.salary_data %}
+        <div class="salary-info-box p-6 rounded-lg">
+             <h3 class="text-lg font-semibold mb-2.5 flex items-center text-emerald-800">
+                 <i class="fa-solid fa-sack-dollar mr-2.5 text-emerald-600 fa-lg"></i> Salary Insights (Estimated)
+             </h3>
+            {% if insights.salary_data.average %}
+                <p class="text-sm leading-relaxed">
+                    Estimated average salary: <strong class="text-lg font-semibold">{{ "{:,.0f}".format(insights.salary_data.average) }}</strong> <span class="text-xs text-emerald-700"> ({{ insights.query.country.upper() }})</span>
+                </p>
+                <p class="text-xs text-emerald-700 mt-1">Note: Based on Adzuna's histogram data.</p>
+            {% elif insights.salary_data.histogram %}
+                <p class="text-sm leading-relaxed">Salary distribution data found, but average could not be calculated.</p>
+            {% else %}
+                <p class="text-sm leading-relaxed">Salary data unavailable for this search.</p> {# Clearer message #}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if insights.ai_summary_html %} {# This existing check handles whether to show it #}
+        <div class="ai-summary-box p-6 rounded-lg">
+            <h3 class="text-lg font-semibold mb-2.5 flex items-center text-sky-900">
+                <i class="fa-solid fa-user-tie mr-2.5 text-sky-500 fa-lg"></i> AI Recruitment Analysis
+            </h3>
+            <div class="text-sm leading-relaxed ai-summary-content">
+                {{ insights.ai_summary_html | safe }} {# Use safe filter if HTML comes from trusted source #}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if insights.job_listings %}
+            <div>
+                <h3 class="text-xl font-semibold text-slate-700 mb-5 text-center md:text-left">Sample Job Listings</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for job in insights.job_listings %}
+                    <div class="job-card bg-white border border-slate-200/80 p-5 rounded-lg shadow-sm transition-all-ease flex flex-col justify-between">
+                        <div>
+                            <h4 class="text-lg font-semibold text-indigo-700 hover:text-indigo-800 mb-1.5">
+                                <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{ job.title }}</a>
+                            </h4>
+                            <div class="text-sm text-slate-600 mb-3 space-y-1">
+                                <p><i class="fa-regular fa-building mr-1.5 w-4 text-center opacity-70"></i> {{ job.company }}</p>
+                                <p><i class="fa-solid fa-location-dot mr-1.5 w-4 text-center opacity-70"></i> {{ job.location }}</p>
+                            </div>
+                            <p class="text-sm text-slate-700 line-clamp-3 mb-4">
+                                {{ job.description }}
+                            </p>
+                        </div>
+                        <div class="flex justify-between items-center mt-3 pt-4 border-t border-slate-100">
+                            <p class="text-xs text-slate-500">
+                                <i class="fa-regular fa-clock mr-1"></i> Posted: {{ job.created.split('T')[0] }}
+                            </p>
+                            <div class="flex items-center space-x-2">
+                                {% if current_user.is_authenticated %}
+                                    <span class="save-job-container relative"> {# Container for button and feedback #}
+                                        {% if job.adzuna_job_id in saved_job_ids %}
+                                            <button type="button" class="action-btn saved-btn save-toggle-btn"
+                                                    data-action="unsave"
+                                                    data-job-id="{{ job.adzuna_job_id }}"
+                                                    data-save-url="{{ url_for('main_bp.save_job') }}" {# FIXED #}
+                                                    data-unsave-url="{{ url_for('main_bp.unsave_job') }}" {# FIXED #}
+                                                    title="Remove from saved jobs">
+                                                <i class="fas fa-bookmark"></i> Saved
+                                            </button>
+                                        {% else %}
+                                            <button type="button" class="action-btn save-btn save-toggle-btn"
+                                                    data-action="save"
+                                                    data-job-id="{{ job.adzuna_job_id }}"
+                                                    data-title="{{ job.title }}"
+                                                    data-company="{{ job.company }}"
+                                                    data-location="{{ job.location }}"
+                                                    data-adzuna-url="{{ job.url }}"
+                                                    data-save-url="{{ url_for('main_bp.save_job') }}" {# FIXED #}
+                                                    data-unsave-url="{{ url_for('main_bp.unsave_job') }}" {# FIXED #}
+                                                    title="Save this job">
+                                                <i class="far fa-bookmark"></i> Save
+                                            </button>
+                                        {% endif %}
+                                        <span class="feedback-message absolute -top-6 right-0 whitespace-nowrap"></span> {# Feedback placeholder #}
+                                    </span>
+                                {% endif %} {# End current_user.is_authenticated check #}
+                                <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-all-ease group">
+                                    View Job <i class="fas fa-arrow-right text-xs ml-1.5 group-hover:translate-x-0.5 transition-transform"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %} {# End job loop #}
+                </div>
+            </div>
+        {% elif insights %} {# Case where insights exist but specifically no job listings #}
+             <div class="bg-white p-8 rounded-lg shadow-sm text-center text-slate-500 border border-slate-200/80">
+                <i class="fas fa-inbox fa-2x text-slate-400 mb-4"></i>
+                <p class="font-medium">No specific job listings found for this search.</p>
+                <p class="text-sm">Try broadening your search terms or checking the location.</p>
+            </div>
+        {% endif %} {# End job_listings check #}
+
+    </section>
+    {% elif request.method == 'POST' and not insights %} {# If it was a POST but insights is None/False after processing #}
+     <div id="results-placeholder" class="bg-amber-50 border border-amber-200 p-6 rounded-lg shadow-sm text-center text-amber-800">
+         <i class="fas fa-exclamation-triangle fa-lg mr-2"></i> No results found or an error occurred. Please check messages above or refine your search.
+     </div>
+    {% endif %} {# End insights check / request.method check #}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }} {# Include any scripts from base.html if needed #}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const saveToggleButtons = document.querySelectorAll('.save-toggle-btn');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    saveToggleButtons.forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault(); // Prevent default form submission if any
+            const btn = event.currentTarget;
+            const action = btn.dataset.action; // 'save' or 'unsave'
+            const jobId = btn.dataset.jobId;
+            const saveUrl = btn.dataset.saveUrl;
+            const unsaveUrl = btn.dataset.unsaveUrl;
+            const feedbackElement = btn.nextElementSibling; // Get the sibling span for feedback
+
+            // --- Prepare data and URL ---
+            let targetUrl = '';
+            let payload = { adzuna_job_id: jobId };
+
+            if (action === 'save') {
+                targetUrl = saveUrl;
+                // Add job details needed for saving
+                payload.title = btn.dataset.title;
+                payload.company = btn.dataset.company;
+                payload.location = btn.dataset.location;
+                payload.adzuna_url = btn.dataset.adzunaUrl;
+            } else if (action === 'unsave') {
+                targetUrl = unsaveUrl;
+            } else {
+                console.error('Unknown action:', action);
+                return; // Should not happen
+            }
+
+            // --- Disable button during request ---
+            btn.disabled = true;
+            btn.style.opacity = '0.6'; // Visual feedback
+
+            // --- Clear previous feedback ---
+            if (feedbackElement) {
+                feedbackElement.textContent = '';
+                feedbackElement.classList.remove('show', 'feedback-success', 'feedback-error');
+            }
+
+            // --- Send AJAX request ---
+            try {
+                const response = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken // Include CSRF token
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.status === 'success') {
+                    // --- Update button state on success ---
+                    if (action === 'save') {
+                        btn.classList.remove('save-btn');
+                        btn.classList.add('saved-btn');
+                        btn.dataset.action = 'unsave';
+                        btn.title = 'Remove from saved jobs';
+                        btn.innerHTML = '<i class="fas fa-bookmark"></i> Saved';
+                        showFeedback(feedbackElement, 'Saved!', 'success');
+                    } else { // action === 'unsave'
+                        btn.classList.remove('saved-btn');
+                        btn.classList.add('save-btn');
+                        btn.dataset.action = 'save';
+                        btn.title = 'Save this job';
+                        btn.innerHTML = '<i class="far fa-bookmark"></i> Save';
+                        showFeedback(feedbackElement, 'Removed', 'success');
+                    }
+                } else {
+                    // --- Handle error from server ---
+                    console.error('Save/Unsave failed:', result.message || 'Unknown error');
+                    showFeedback(feedbackElement, result.message || 'Error', 'error');
+                }
+
+            } catch (error) {
+                // --- Handle network or other errors ---
+                console.error('Network error:', error);
+                showFeedback(feedbackElement, 'Network error', 'error');
+            } finally {
+                // --- Re-enable button ---
+                btn.disabled = false;
+                 btn.style.opacity = '1';
+            }
+        });
+    });
+
+    // Helper function to show feedback message
+    function showFeedback(element, message, type) {
+        if (!element) return;
+        element.textContent = message;
+        element.classList.remove('feedback-success', 'feedback-error'); // Clear previous type
+        element.classList.add(type === 'success' ? 'feedback-success' : 'feedback-error');
+        element.classList.add('show');
+
+        // Hide feedback after a few seconds
+        setTimeout(() => {
+            element.classList.remove('show');
+        }, 3000); // Hide after 3 seconds
+    }
+});
+</script>
+{% endblock %}
