@@ -33,8 +33,8 @@ jobs:
           WTF_CSRF_ENABLED: 'false'
           LOGIN_DISABLED: 'true'
           SQLALCHEMY_DATABASE_URI: 'sqlite:///:memory:'
-        run: |
-          pytest tests/
+          PYTHONPATH: ${{ github.workspace }}
+        run: pytest tests/
 
   deploy:
     needs: build-and-test
