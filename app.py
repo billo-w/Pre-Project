@@ -18,6 +18,7 @@ import logging
 import markdown
 from markupsafe import Markup
 from urllib.parse import urlparse, parse_qs
+from config import config # Import the config dictionary
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(name)s:%(message)s')
