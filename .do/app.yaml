@@ -1,3 +1,7 @@
+# KSBs: K7, K8, S5, S18, K12, S12 (Automation), K16 (Data Security)
+# This file defines the infrastructure for the Digital Ocean App Platform.
+# It specifies the services, database, environment variables, and build/run commands,
+# enabling automated, repeatable deployments from code.
 name: job-insights-app
 region: lon # Change to your preferred region, e.g., nyc3, ams3
 services:
@@ -10,32 +14,40 @@ services:
     pip install --upgrade pip
     pip install -r requirements.txt
     flask db upgrade # Automatically run migrations on build
-  run_command: gunicorn --worker-tmp-dir /dev/shm wsgi:application
+  # We simplify the run command to the most standard Gunicorn syntax.
+  run_command: gunicorn wsgi:application
+  # Environment variables with corrected, valid 'scope' values.
   envs:
   - key: FLASK_SECRET_KEY
-    scope: APP
+    scope: RUN_TIME
     type: SECRET
   - key: DATABASE_URL
-    scope: APP
-    # This special syntax connects the app to the managed database defined below.
+    # This is needed at build time for `flask db upgrade` and run time for the app.
+    scope: RUN_AND_BUILD_TIME
     value: ${db.DATABASE_URL}
   - key: ADZUNA_APP_ID
-    scope: APP
+    scope: RUN_TIME
     type: SECRET
   - key: ADZUNA_APP_KEY
-    scope: APP
+    scope: RUN_TIME
     type: SECRET
   - key: AZURE_AI_ENDPOINT
-    scope: APP
+    scope: RUN_TIME
     type: SECRET
   - key: AZURE_AI_KEY
-    scope: APP
+    scope: RUN_TIME
     type: SECRET
+  - key: FLASK_CONFIG # Ensures the app runs in production mode.
+    scope: RUN_TIME
+    value: "production"
+  - key: FLASK_APP # This is needed for the 'flask db upgrade' command during build.
+    scope: RUN_AND_BUILD_TIME
+    value: "wsgi.py"
   - key: SQLALCHEMY_ECHO
-    scope: APP
+    scope: RUN_TIME
     value: "False"
   - key: FLASK_DEBUG
-    scope: APP
+    scope: RUN_TIME
     value: "False"
   http_port: 8080
   instance_count: 1
