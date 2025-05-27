@@ -42,6 +42,10 @@ RESULTS_PER_PAGE = 20
 AZURE_AI_ENDPOINT = os.getenv('AZURE_AI_ENDPOINT')
 AZURE_AI_KEY = os.getenv('AZURE_AI_KEY')
 
+logger.info(f"RUNTIME AT MODULE LOAD - ADZUNA_APP_ID: '{ADZUNA_APP_ID}' (Type: {type(ADZUNA_APP_ID)})")
+logger.info(f"RUNTIME AT MODULE LOAD - ADZUNA_APP_KEY: '{ADZUNA_APP_KEY}' (Type: {type(ADZUNA_APP_KEY)})")
+
+
 # --- Database Models ---
 logger.info("--- Defining models ---")
 class User(UserMixin, db.Model):
@@ -260,6 +264,10 @@ def fetch_market_insights(what, where, country, generate_summary=True): # Added 
     Fetches job listings, salary data, and optionally AI summary.
     Returns an 'insights_data' dictionary or None if a critical error occurs.
     """
+
+    logger.info(f"RUNTIME IN fetch_market_insights - ADZUNA_APP_ID: '{ADZUNA_APP_ID}'")
+    logger.info(f"RUNTIME IN fetch_market_insights - ADZUNA_APP_KEY: '{ADZUNA_APP_KEY}'")
+    
     logger.info(f"Fetching insights for: what='{what}', where='{where}', country='{country}', generate_summary={generate_summary}")
     if not all([what, where, country]):
         flash("Missing search criteria.", "error")
