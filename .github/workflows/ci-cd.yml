@@ -1,55 +1,55 @@
-name: CI/CD Pipeline
+# KSBs: K1, K15, S15 (CI/CD), K5, S9 (Security), K14 (Testing)
+# This workflow automates quality gates. On every push, it will:
+# 1. Lint the code for style and errors.
+# 2. Scan dependencies for known vulnerabilities.
+# 3. Run the full test suite against a test database.
+# This ensures that code is high-quality and secure BEFORE it is deployed by App Platform.
+
+name: Python CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [main]
-
-env:
-  DIGITALOCEAN_APP_NAME: job-app  # Change to your App Platform app name
+    branches: [ "main" ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10' # Match your development environment
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      - name: Run tests
-        env:
-          TESTING: 'true'
-          WTF_CSRF_ENABLED: 'false'
-          LOGIN_DISABLED: 'true'
-          SQLALCHEMY_DATABASE_URI: 'sqlite:///:memory:'
-          PYTHONPATH: ${{ github.workspace }}
-        run: pytest tests/
+    - name: Lint with Flake8
+      # KSB: Code Quality
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-  deploy:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    - name: Scan for Vulnerabilities with pip-audit
+      # KSBs: K5, S9 (Dependency Checking)
+      run: |
+        pip install pip-audit
+        pip-audit
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
-
-      - name: Deploy to DigitalOcean App Platform
-        run: |
-          doctl apps update "${{ env.DIGITALOCEAN_APP_NAME }}" --spec .do/app.yaml
+    - name: Run Tests with Pytest
+      # KSBs: K14, S14 (TDD and Unit Testing)
+      # We set environment variables needed for the test configuration.
+      env:
+        FLASK_CONFIG: "testing" # Tells the app to use the TestingConfig
+        FLASK_APP: "app.py"
+        WTF_CSRF_ENABLED: "False" # Disable CSRF for simpler testing
+      run: |
+        pytest --cov=./ --cov-report=xml
