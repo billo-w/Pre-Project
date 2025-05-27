@@ -1,29 +1,53 @@
-name: flask-app
-
+name: job-insights-app
+region: lon # Change to your preferred region, e.g., nyc3, ams3
 services:
-  - name: web
-    environment_slug: python
-    github:
-      repo: your-github-username/your-repo-name
-      branch: main
-      deploy_on_push: true
-    run_command: gunicorn app:app --bind 0.0.0.0:8080
-    build_command: pip install -r requirements.txt
-    envs:
-      - key: FLASK_ENV
-        value: production
-      - key: SQLALCHEMY_DATABASE_URI
-        scope: RUN_TIME
-        value: ${db.DATABASE_URL}
-    http_port: 8080
-    instance_count: 1
-    instance_size_slug: basic-xxs
-    routes:
-      - path: /
+- name: web
+  # App Platform builds from source, pulling from your GitHub repo.
+  github:
+    repo: billo-w/Pre-Project # IMPORTANT: Change this!
+    branch: main
+  build_command: |
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    flask db upgrade # Automatically run migrations on build
+  run_command: gunicorn --worker-tmp-dir /dev/shm wsgi:application
+  envs:
+  - key: FLASK_SECRET_KEY
+    scope: APP
+    type: SECRET
+  - key: DATABASE_URL
+    scope: APP
+    # This special syntax connects the app to the managed database defined below.
+    value: ${db.DATABASE_URL}
+  - key: ADZUNA_APP_ID
+    scope: APP
+    type: SECRET
+  - key: ADZUNA_APP_KEY
+    scope: APP
+    type: SECRET
+  - key: AZURE_AI_ENDPOINT
+    scope: APP
+    type: SECRET
+  - key: AZURE_AI_KEY
+    scope: APP
+    type: SECRET
+  - key: SQLALCHEMY_ECHO
+    scope: APP
+    value: "False"
+  - key: FLASK_DEBUG
+    scope: APP
+    value: "False"
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: basic-xxs # Start with the smallest size and scale as needed
+  # Defines health checks for operability (K11)
+  health_check:
+    http_path: / # App Platform will check the root URL to see if the app is alive.
 
+# Defines the managed PostgreSQL database (K12, S7)
 databases:
-  - name: db
-    engine: PG
-    version: "15"
-    cluster_name: flask-app-db
-    production: true
+- name: db
+  engine: PG # PostgreSQL
+  version: "14" # Specify your PostgreSQL version
+  # Production clusters are recommended, but 'db-s-1vcpu-1gb' is a good start.
+  size: db-s-1vcpu-1gb
