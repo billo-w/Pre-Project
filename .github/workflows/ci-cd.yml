@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4 # Updated to v4
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v5 # Updated to v5
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10' # Match your development environment
 
@@ -43,7 +43,16 @@ jobs:
       env:
         FLASK_CONFIG: "testing" # Tells the app to use the TestingConfig
         FLASK_APP: "wsgi.py" # Point to wsgi.py as the entry point for Flask CLI
+        PYTHONPATH: "." # Add project root to Python's module search path
         # WTF_CSRF_ENABLED: "False" # Usually handled by TestingConfig
         # DATABASE_URL: "sqlite:///:memory:" # Usually handled by TestingConfig
       run: |
         pytest --cov=./ --cov-report=xml --cov-report=html
+
+    # Optional: Upload coverage reports
+    # - name: Upload coverage reports to Codecov
+    #   uses: codecov/codecov-action@v3
+    #   with:
+    #     token: ${{ secrets.CODECOV_TOKEN }} # if you use Codecov
+    #     files: ./coverage.xml
+    #     fail_ci_if_error: true
