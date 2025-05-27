@@ -1,7 +1,16 @@
+# KSBs: K14, S14 (TDD, Unit Testing, Mocking), S11 (Systematic Problem Solving)
+# This file contains unit and integration tests for the application.
+# It demonstrates:
+# - Testing basic route responses.
+# - Testing user registration and authentication logic.
+# - Mocking external API calls to isolate our application logic for testing.
+
 import json
 from unittest.mock import patch, MagicMock
 import pytest # Import pytest for monkeypatch
 
+# It's good practice to import the specific things you need to patch or use
+import app as main_app # Use an alias to avoid confusion if 'app' is used elsewhere
 from app import User # Assuming User is defined in app.py or accessible
 
 def test_home_page(test_client):
@@ -68,16 +77,17 @@ def test_fetch_market_insights_mocked(mock_get, test_client, monkeypatch): # Add
     # The second will be for the salary histogram.
     mock_get.side_effect = [mock_adzuna_search_response, mock_adzuna_histogram_response]
 
-    # Set necessary environment variables to prevent flash() due to missing creds
-    monkeypatch.setenv('ADZUNA_APP_ID', 'test_app_id')
-    monkeypatch.setenv('ADZUNA_APP_KEY', 'test_app_key')
+    # Use monkeypatch.setattr to directly modify the module-level variables in 'app.py'
+    monkeypatch.setattr(main_app, 'ADZUNA_APP_ID', 'test_app_id_set_by_setattr')
+    monkeypatch.setattr(main_app, 'ADZUNA_APP_KEY', 'test_app_key_set_by_setattr')
     # No need to set AZURE_AI_ENDPOINT/KEY as generate_summary=False
 
     # We need to be in an app context to use the functions
     # and for db operations if any were directly in fetch_market_insights
     with test_client.application.app_context():
-        from app import fetch_market_insights # Import locally to use patched version
-        insights = fetch_market_insights(
+        # Ensure we are using the fetch_market_insights from the 'main_app' module
+        # where ADZUNA_APP_ID and ADZUNA_APP_KEY have been patched.
+        insights = main_app.fetch_market_insights(
             what="devops", where="london", country="gb", generate_summary=False
         )
 
@@ -92,8 +102,8 @@ def test_fetch_market_insights_mocked(mock_get, test_client, monkeypatch): # Add
     mock_get.assert_any_call(
         'https://api.adzuna.com/v1/api/jobs/gb/search/1', # Make sure this matches your app.py
         params={
-            'app_id': 'test_app_id', # Should match monkeypatched value
-            'app_key': 'test_app_key', # Should match monkeypatched value
+            'app_id': 'test_app_id_set_by_setattr', # Should match monkeypatched value
+            'app_key': 'test_app_key_set_by_setattr', # Should match monkeypatched value
             'what': 'devops',
             'where': 'london',
             'results_per_page': 20, # As defined in app.py
@@ -105,8 +115,8 @@ def test_fetch_market_insights_mocked(mock_get, test_client, monkeypatch): # Add
     mock_get.assert_any_call(
         'https://api.adzuna.com/v1/api/jobs/gb/histogram', # Make sure this matches your app.py
         params={
-            'app_id': 'test_app_id',
-            'app_key': 'test_app_key',
+            'app_id': 'test_app_id_set_by_setattr',
+            'app_key': 'test_app_key_set_by_setattr',
             'location0': 'london', # Check param name in get_salary_histogram
             'what': 'devops',
             'content-type': 'application/json'
