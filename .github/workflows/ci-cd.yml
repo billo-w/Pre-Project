@@ -1,10 +1,3 @@
-# KSBs: K1, K15, S15 (CI/CD), K5, S9 (Security), K14 (Testing)
-# This workflow automates quality gates. On every push, it will:
-# 1. Lint the code for style and errors.
-# 2. Scan dependencies for known vulnerabilities.
-# 3. Run the full test suite against a test database.
-# This ensures that code is high-quality and secure BEFORE it is deployed by App Platform.
-
 name: Python CI/CD Pipeline
 
 on:
@@ -18,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4 # Updated to v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5 # Updated to v5
       with:
         python-version: '3.10' # Match your development environment
 
-    - name: Install Dependencies
+    - name: Install and upgrade core packaging tools & Dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade pip setuptools wheel # Upgrade core tools first
         pip install -r requirements.txt
 
     - name: Lint with Flake8
@@ -41,15 +34,16 @@ jobs:
     - name: Scan for Vulnerabilities with pip-audit
       # KSBs: K5, S9 (Dependency Checking)
       run: |
-        pip install pip-audit
-        pip-audit
+        pip install pip-audit # Ensure pip-audit is installed in the current env
+        pip-audit # Run the audit
 
     - name: Run Tests with Pytest
       # KSBs: K14, S14 (TDD and Unit Testing)
       # We set environment variables needed for the test configuration.
       env:
         FLASK_CONFIG: "testing" # Tells the app to use the TestingConfig
-        FLASK_APP: "app.py"
-        WTF_CSRF_ENABLED: "False" # Disable CSRF for simpler testing
+        FLASK_APP: "wsgi.py" # Point to wsgi.py as the entry point for Flask CLI
+        # WTF_CSRF_ENABLED: "False" # Usually handled by TestingConfig
+        # DATABASE_URL: "sqlite:///:memory:" # Usually handled by TestingConfig
       run: |
-        pytest --cov=./ --cov-report=xml
+        pytest --cov=./ --cov-report=xml --cov-report=html
