@@ -1,65 +1,89 @@
-# KSBs: K7, K8, S5, S18, K12, S12 (Automation), K16 (Data Security)
-# This file defines the infrastructure for the Digital Ocean App Platform.
-# It specifies the services, database, environment variables, and build/run commands,
-# enabling automated, repeatable deployments from code.
-name: job-insights-app
-region: lon # Change to your preferred region, e.g., nyc3, ams3
-services:
-- name: web
-  # App Platform builds from source, pulling from your GitHub repo.
-  github:
-    repo: billo-w/Pre-Project # IMPORTANT: Change this!
-    branch: main
-  build_command: |
+databases:
+- cluster_name: db-postgresql-lon1-39455
+  db_name: defaultdb
+  db_user: doadmin
+  engine: PG
+  name: db-postgresql-lon1-39455
+  production: true
+  version: "17"
+ingress:
+  rules:
+  - component:
+      name: web
+    match:
+      path:
+        prefix: /
+jobs:
+- build_command: |
     pip install --upgrade pip
     pip install -r requirements.txt
-    flask db upgrade # Automatically run migrations on build
-  # We simplify the run command to the most standard Gunicorn syntax.
-  run_command: gunicorn wsgi:application
-  # Environment variables with corrected, valid 'scope' values.
+    echo "Migration job dependencies installed."
+  envs:
+  - key: FLASK_APP
+    scope: RUN_TIME
+    value: wsgi.py
+  - key: FLASK_CONFIG
+    scope: RUN_TIME
+    value: production
+  github:
+    branch: main
+    repo: billo-w/Pre-Project
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-0.5gb
+  kind: PRE_DEPLOY
+  name: migrate
+  run_command: flask db upgrade
+name: job-insights-app
+region: lon
+services:
+- build_command: |
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    echo "Web service build complete (migrations handled by job)."
   envs:
   - key: FLASK_SECRET_KEY
     scope: RUN_TIME
     type: SECRET
+    value: EV[1:eqS+rPu5hlLr+YyrBU2lPTYlvyqEXf/r:beyL0UAlSYuT9OwznU3dLw==]
   - key: DATABASE_URL
-    # This is needed at build time for `flask db upgrade` and run time for the app.
     scope: RUN_AND_BUILD_TIME
-    value: ${db.DATABASE_URL}
+    type: SECRET
+    value: EV[1:lt+37/v/mM7eTx8gHOecRFf6JYCHxZiJ:DqpVwXFK0lxXGNeTcUeq8w==]
   - key: ADZUNA_APP_ID
-    scope: RUN_TIME
-    type: SECRET
-  - key: ADZUNA_APP_KEY
-    scope: RUN_TIME
-    type: SECRET
-  - key: AZURE_AI_ENDPOINT
-    scope: RUN_TIME
-    type: SECRET
-  - key: AZURE_AI_KEY
-    scope: RUN_TIME
-    type: SECRET
-  - key: FLASK_CONFIG # Ensures the app runs in production mode.
-    scope: RUN_TIME
-    value: "production"
-  - key: FLASK_APP # This is needed for the 'flask db upgrade' command during build.
     scope: RUN_AND_BUILD_TIME
-    value: "wsgi.py"
+    type: SECRET
+    value: EV[1:RHUMAj3yOHhBxZyimKQRLOA2rLRvGGGj:sg+/FG2OSazVmSMXWTmdnw==]
+  - key: ADZUNA_APP_KEY
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:xI/8dzYdk6W8sW/wMS57J/I0a12ZmWet:Nv0Yg6lGbgXec+4rxQp1gQ==]
+  - key: AZURE_AI_ENDPOINT
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:zU25btQ87rnHDYoe0nHOpkOB+bwqyNNG:bpJ/uMHMjvCB0gSrl5l87g==]
+  - key: AZURE_AI_KEY
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:uZEghKM78ec78xmOOQR6Nyx4bsWijhBJ:jmS5cbzsKZJH5KD+pPG6sg==]
+  - key: FLASK_CONFIG
+    scope: RUN_AND_BUILD_TIME
+    value: production
+  - key: FLASK_APP
+    scope: RUN_AND_BUILD_TIME
+    value: wsgi.py
   - key: SQLALCHEMY_ECHO
     scope: RUN_TIME
     value: "False"
   - key: FLASK_DEBUG
     scope: RUN_TIME
     value: "False"
+  github:
+    branch: main
+    repo: billo-w/Pre-Project
+  health_check:
+    http_path: /
   http_port: 8080
   instance_count: 1
-  instance_size_slug: basic-xxs # Start with the smallest size and scale as needed
-  # Defines health checks for operability (K11)
-  health_check:
-    http_path: / # App Platform will check the root URL to see if the app is alive.
-
-# Defines the managed PostgreSQL database (K12, S7)
-databases:
-- name: db
-  engine: PG # PostgreSQL
-  version: "14" # Specify your PostgreSQL version
-  # Production clusters are recommended, but 'db-s-1vcpu-1gb' is a good start.
-  size: db-s-1vcpu-1gb
+  instance_size_slug: basic-xxs
+  name: web
+  run_command: gunicorn wsgi:application
